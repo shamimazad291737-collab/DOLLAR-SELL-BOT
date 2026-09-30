@@ -3,74 +3,81 @@ import telebot
 from flask import Flask
 from threading import Thread
 
-# Render-এর Environment Variables থেকে টোকেন এবং অ্যাডমিন আইডি রিড করবে
+# Render-er Environment Variables theke token ebong admin ID read korbe
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 0))
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Global variables for rates and wallet numbers
+# Global variables for rates and bkash number
 bot_data = {
     "sell_rate": 119.00,
     "buy_rate": 122.00,
-    "bkash_number": "01700000000 (Personal)",
-    "nagad_number": "01800000000 (Personal)"
+    "bkash_number": "01700000000 (Personal)"
 }
 
-# Web Service সচল রাখার জন্য রেন্ডারের হোমপেজ রুট
+# User der ID track korar jonno set (broadcast er jonno)
+users = set()
+
 @app.route('/')
 def home():
     return "<h1>Dollar Sell/Buy Bot is Running Successfully! 🚀</h1>"
 
-# /start command handler (Example এর মতো হুবহু Banglish UI)
+# /start command handler
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_sell = types.InlineKeyboardButton("💸 Sell Dollar", callback_data="sell_dollar")
-    btn_buy = types.InlineKeyboardButton("🛒 Buy Dollar", callback_data="buy_dollar")
-    btn_rates = types.InlineKeyboardButton("📊 Today's Rate", callback_data="check_rates")
-    btn_support = types.InlineKeyboardButton("📞 Customer Support", callback_data="support")
+    users.add(message.chat.id)
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    btn_sell = telebot.types.InlineKeyboardButton("💸 Sell Dollar", callback_data="sell_dollar")
+    btn_buy = telebot.types.InlineKeyboardButton("🛒 Buy Dollar", callback_data="buy_dollar")
+    btn_rates = telebot.types.InlineKeyboardButton("📊 Today's Rate", callback_data="check_rates")
+    btn_support = telebot.types.InlineKeyboardButton("📞 Customer Support", callback_data="support")
     
     markup.add(btn_sell, btn_buy, btn_rates, btn_support)
     
-    # Jodi user admin hoy, tobe admin panel button dekhabe
     if message.from_user.id == ADMIN_ID:
-        btn_admin = types.InlineKeyboardButton("⚙️ Admin Panel", callback_data="admin_panel")
+        btn_admin = telebot.types.InlineKeyboardButton("⚙️ Admin Panel", callback_data="admin_panel")
         markup.add(btn_admin)
 
     welcome_text = (
         f"🌟 **Welcome to our trusted dollar exchange service!**\n\n"
         f"💰 Current Dollar Rate (Khuchra):\n"
-        f"• Sell Rate: **{bot_data['sell_rate']} TK**\n"
-        f"• Buy Rate: **{bot_data['buy_rate']} TK**\n\n"
+        f"• Sell Rate (Amader kase sell korben): **{bot_data['sell_rate']} TK**\n"
+        f"• Buy Rate (Amader kase kinben): **{bot_data['buy_rate']} TK**\n\n"
         f"Nicer button theke apnar dorkari option ti select korun 👇"
     )
     
     bot.send_message(message.chat.id, welcome_text, parse_mode="Markdown", reply_markup=markup)
 
-# Callback query handler for button clicks
+# Callback query handler for buttons
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    users.add(call.message.chat.id)
+    
     if call.data == "sell_dollar":
         text = (
             f"💸 **Dollar Sell Korar Niyomaboli:**\n\n"
-            f"• Current Khuchra Rate: **{bot_data['sell_rate']} TK**\n"
-            f"• Minimum Sell: **$10**\n\n"
-            f"Apni koto doller sell korte chan? Amount ti ekhane likhun (Jemon: `50` likhe send korun)."
+            f"• Current Sell Rate: **{bot_data['sell_rate']} TK**\n"
+            f"• Minimum Limit: **$10**\n\n"
+            f"Apni amader **Binance Pay ID / Email** a dollar send kore, apnar bKash personal number ebong koto dollar sell korte chan tar amount ekhane send korun."
         )
-        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="Markdown")
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
+        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "buy_dollar":
         text = (
             f"🛒 **Dollar Kenar Niyomaboli:**\n\n"
-            f"• Current Rate: **{bot_data['buy_rate']} TK**\n"
-            f"• Payment Method: bKash / Nagad\n\n"
-            f"Amader official personal number:\n"
-            f"📲 bKash: `{bot_data['bkash_number']}`\n\n"
-            f"Taka pathiye Transaction ID (TrxID) ebong apnar wallet details ekhane send korun."
+            f"• Current Buy Rate: **{bot_data['buy_rate']} TK**\n"
+            f"• Payment Method: bKash (Personal)\n\n"
+            f"Amader official bKash number:\n"
+            f"📲 `{bot_data['bkash_number']}`\n\n"
+            f"Taka send kore apnar **Transaction ID (TrxID)** ebong apnar **Binance Pay ID** ekhane send korun."
         )
-        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode="Markdown")
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
+        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "check_rates":
         text = (
@@ -79,8 +86,8 @@ def callback_query(call):
             f"🔹 Buy Rate (Apni amader kase kinben): **{bot_data['buy_rate']} TK**\n\n"
             f"💡 Boro amount er doller exchange er jonno direct support a যোগাযোগ korun."
         )
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
         bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "support":
@@ -90,35 +97,36 @@ def callback_query(call):
             f"👤 Admin Username: @YourAdminUsername\n"
             f"⏰ Somoykal: Sokal 10ta theke rat 12ta porjonto."
         )
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
         bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "admin_panel" and call.from_user.id == ADMIN_ID:
         admin_text = (
-            f"⚙️️ **Admin Control Panel**\n\n"
+            f"⚙️ **Admin Control Panel**\n\n"
             f"Current Settings:\n"
             f"• Sell Rate: {bot_data['sell_rate']} TK\n"
             f"• Buy Rate: {bot_data['buy_rate']} TK\n"
-            f"• bKash Number: {bot_data['bkash_number']}\n\n"
-            f"Rate ba bkash number change korar jonno command use korun:\n"
+            f"• bKash Number: {bot_data['bkash_number']}\n"
+            f"• Total Bot Users: {len(users)}\n\n"
+            f"Admin Commands:\n"
             f"👉 `/setrate [sell] [buy]`\n"
-            f"👉 `/setbkash [number]`"
+            f"👉 `/setbkash [number]`\n"
+            f"👉 `/broadcast [message]`"
         )
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton("🔙 Back to Home", callback_data="back_home"))
         bot.edit_message_text(text=admin_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "back_home":
         send_welcome(call.message)
 
-# Admin Command: Update Rates (Jemon: /setrate 120 123)
+# Admin Command: Update Rates
 @bot.message_handler(commands=['setrate'])
 def update_rate(message):
     if message.from_user.id != ADMIN_ID:
         bot.reply_to(message, "❌ Apnar ei command use korar permission nei!")
         return
-    
     try:
         parts = message.text.split()
         new_sell = float(parts[1])
@@ -129,19 +137,41 @@ def update_rate(message):
     except Exception as e:
         bot.reply_to(message, "⚠️ Sothik niyome likhun. Example: `/setrate 119 122`", parse_mode="Markdown")
 
-# Admin Command: Update bKash Number (Jemon: /setbkash 017xxxxxxxx)
+# Admin Command: Update bKash Number
 @bot.message_handler(commands=['setbkash'])
 def update_bkash(message):
     if message.from_user.id != ADMIN_ID:
         bot.reply_to(message, "❌ Apnar ei permission nei!")
         return
-    
     try:
         new_number = message.text.replace("/setbkash", "").strip()
         bot_data["bkash_number"] = new_number
         bot.reply_to(message, f"✅ bKash number safolvabe update hoyeche:\n`{new_number}`", parse_mode="Markdown")
     except Exception as e:
         bot.reply_to(message, "⚠️ Sothik niyome likhun. Example: `/setbkash 01712345678`")
+
+# Admin Command: Broadcast Message to all Users
+@bot.message_handler(commands=['broadcast'])
+def broadcast_message(message):
+    if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "❌ Apnar ei command use korar permission nei!")
+        return
+    
+    bc_text = message.text.replace("/broadcast", "").strip()
+    if not bc_text:
+        bot.reply_to(message, "⚠️ Sothik niyome likhun. Example:\n`/broadcast Ei shohore notun rate cholche!`", parse_mode="Markdown")
+        return
+    
+    success = 0
+    failed = 0
+    for uid in users:
+        try:
+            bot.send_message(uid, f"📢 **Announcement:**\n\n{bc_text}", parse_mode="Markdown")
+            success += 1
+        except Exception:
+            failed += 1
+            
+    bot.reply_to(message, f"✅ Broadcast Complete!\nSuccess: {success} users\nFailed: {failed}")
 
 # Telegram Bot Background Thread
 def run_bot():
