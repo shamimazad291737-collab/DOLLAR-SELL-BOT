@@ -1,9 +1,10 @@
 import os
+import threading
 import telebot
 from telebot import types
+from flask import Flask
 
 TOKEN = os.environ.get('BOT_TOKEN')
-# Safe parsing for ADMIN_ID
 try:
     ADMIN_ID = int(os.environ.get('ADMIN_ID', '0'))
 except ValueError:
@@ -14,11 +15,19 @@ ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
-# Polling মোডের জন্য টেলিগ্রাম বট ইনিশিয়ালাইজেশন
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
 user_state = {}
 bot_status = {"is_active": True}
+
+@app.route('/')
+def home():
+    return "Bot is running live!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -76,7 +85,7 @@ def handle_messages(message):
 
     elif text == "👑 ADMIN PANEL":
         if user_id != ADMIN_ID:
-            bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`\n(Eta Render-er ADMIN_ID variable-e bosan)", parse_mode="Markdown", reply_markup=main_menu())
+            bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`", parse_mode="Markdown", reply_markup=main_menu())
             return
         
         admin_markup = types.InlineKeyboardMarkup(row_width=2)
@@ -211,13 +220,17 @@ def callback_query(call):
         bot.answer_callback_query(call.id, f"Status: {status_text}", show_alert=True)
 
     elif data == "admin_rate":
-        bot.answer_callback_query(call.id, f"Rate: ৳{DOLAR_RATE}", show_alert=True)
+        bot.answer_keyword = bot.answer_callback_query(call.id, f"Rate: ৳{DOLAR_RATE}", show_alert=True)
 
     elif data == "admin_broadcast":
         user_state[ADMIN_ID] = {"step": "waiting_broadcast"}
         bot.send_message(ADMIN_ID, "📢 Broadcast message-ti likhe pathan:")
 
 if __name__ == "__main__":
-    print("Bot is starting with Polling mode...")
+    # Flask ke alada thread-e cholate hobe jate port open thake
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    print("Bot is starting with Web Service & Polling mode...")
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
