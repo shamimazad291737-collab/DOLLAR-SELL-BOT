@@ -3,9 +3,9 @@ import telebot
 from flask import Flask
 from threading import Thread
 
-# Render-er Environment Variables theke token ebong admin ID read korbe
-TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", 0))
+# Ekhane apnar token ebong admin ID direct bosiye din
+TOKEN = "8920302105:AAG1D4e6KHl7d_ox8y8uV6Ox9i-l3u2mAQ4  # Jemon: "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+ADMIN_ID = 7388500439           # Apnar Telegram numeric user ID
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
@@ -13,8 +13,8 @@ app = Flask(__name__)
 # Global variables for rates and bkash number
 bot_data = {
     "sell_rate": 119.00,
-    "buy_rate": 122.00,
-    "bkash_number": "01700000000 (Personal)"
+    "buy_rate": 125.00,
+    "bkash_number": "01858582881 (Personal)"
 }
 
 # User der ID track korar jonno set (broadcast er jonno)
