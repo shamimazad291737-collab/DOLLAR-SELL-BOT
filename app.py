@@ -1,33 +1,21 @@
 import os
-import threading
 import telebot
 from telebot import types
-from flask import Flask
 
+# শুধু টেলিগ্রাম টোকেনটি রেলওয়ে ভ্যারিয়েবল থেকে নেওয়া হবে
 TOKEN = os.environ.get('BOT_TOKEN')
-try:
-    ADMIN_ID = int(os.environ.get('ADMIN_ID', '0'))
-except ValueError:
-    ADMIN_ID = 0
 
-BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
-ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
-DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
+# বাকি সব কনফিগারেশন আপনি এখানে সরাসরি বসিয়ে দিন
+ADMIN_ID = 6123456789          # আপনার টেলিগ্রাম অ্যাডমিন আইডি এখানে দিন
+BINANCE_ID = "123456789"       # আপনার বাইন্যান্স পে আইডি এখানে দিন
+ADMIN_BKASH = "01XXXXXXXXX"    # আপনার বিকাশ নম্বর এখানে দিন
+ADMIN_USERNAME = "SAIM_X9"     # আপনার ইউজারনেম
+DOLAR_RATE = 119.0             # বর্তমান ডলার রেট
 
 bot = telebot.TeleBot(TOKEN)
-app = Flask(__name__)
 
 user_state = {}
 bot_status = {"is_active": True}
-
-@app.route('/')
-def home():
-    return "Bot is running live!"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
 
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -225,9 +213,6 @@ def callback_query(call):
         bot.send_message(ADMIN_ID, "📢 Broadcast message-ti likhe pathan:")
 
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-
-    print("Bot is starting with Web Service & Polling mode...")
+    print("Bot is starting on Railway...")
     bot.remove_webhook()
     bot.infinity_polling(skip_pending=True)
