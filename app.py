@@ -11,7 +11,7 @@ except ValueError:
 
 BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
 ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
@@ -41,11 +41,14 @@ def webhook_handler():
 def index():
     return "🚀 Premium Dollar Sell Bot is running smoothly!", 200
 
-def set_webhook_url():
+# Webhook automatic setup
+def setup_webhook():
     bot.remove_webhook()
     render_url = os.environ.get('RENDER_EXTERNAL_URL')
     if render_url:
-        bot.set_webhook(url=f"{render_url}/{TOKEN}")
+        webhook_url = f"{render_url}/{TOKEN}"
+        bot.set_webhook(url=webhook_url)
+        print(f"Webhook set to: {webhook_url}")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -215,7 +218,7 @@ def callback_query(call):
         )
         bot.edit_message_caption(caption=call.message.caption + "\n\n✅ **STATUS: APPROVED & PAID**", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
-    elif data.startswith("rej_"):
+    elif data.startswith_prefix if hasattr(data, 'startswith_prefix') else data.startswith("rej_"):
         target_user = int(data.split("_")[1])
         bot.answer_callback_query(call.id, "Rejected.")
         bot.send_message(
@@ -239,5 +242,5 @@ def callback_query(call):
         bot.send_message(ADMIN_ID, "📢 ব্রডকাস্ট মেসেজটি লিখে পাঠান:")
 
 if __name__ == "__main__":
-    set_webhook_url()
+    setup_webhook()
     server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
