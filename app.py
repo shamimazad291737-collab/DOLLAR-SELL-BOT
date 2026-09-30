@@ -11,7 +11,7 @@ except ValueError:
 
 BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
 ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
 # Polling মোডের জন্য টেলিগ্রাম বট ইনিশিয়ালাইজেশন
