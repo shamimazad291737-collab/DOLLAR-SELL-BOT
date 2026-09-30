@@ -11,7 +11,7 @@ except ValueError:
 
 BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
 ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
 # Polling মোডের জন্য টেলিগ্রাম বট ইনিশিয়ালাইজেশন
@@ -63,19 +63,20 @@ def handle_messages(message):
             f"✏️ **Apni koto dollar (USD) sell korte chan?**\n"
             f"Dya kore shudhu songkha ti (je: `10` ba `50`) niche likhe pathan:"
         )
-        bot.send_message(user_id, msg, parse_mode="Markdown")
+        bot.send_message(user_id, msg, parse_mode="Markdown", reply_markup=main_menu())
 
     elif text == "📞 SUPPORT & HELP":
+        user_state.pop(user_id, None)
         support_msg = (
             f"🛠 **Customer Support & Help Desk**\n\n"
             f"Jekono proyojone amader official admin-er sathe jogajog korun:\n\n"
             f"👤 **Admin Username:** @{ADMIN_USERNAME}"
         )
-        bot.send_message(user_id, support_msg, parse_mode="Markdown")
+        bot.send_message(user_id, support_msg, parse_mode="Markdown", reply_markup=main_menu())
 
     elif text == "👑 ADMIN PANEL":
         if user_id != ADMIN_ID:
-            bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`\n(Eta Render-er ADMIN_ID variable-e bosan)", parse_mode="Markdown")
+            bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`\n(Eta Render-er ADMIN_ID variable-e bosan)", parse_mode="Markdown", reply_markup=main_menu())
             return
         
         admin_markup = types.InlineKeyboardMarkup(row_width=2)
@@ -84,12 +85,12 @@ def handle_messages(message):
             types.InlineKeyboardButton("💱 Change Rate", callback_data="admin_rate"),
             types.InlineKeyboardButton("🔄 Bot On/Off", callback_data="admin_toggle")
         )
-        bot.send_message(user_id, "👑 **Admin Control Panel**\n\nNicher option gulo theke kaj select korun:", parse_mode="Markdown", reply_markup=admin_markup)
+        bot.send_message(user_id, "👑 **Admin Control Panel**\n\nNicher option gulo theke kaj select korun:", parse_mode="Markdown", reply_markup=main_menu())
 
     elif user_state.get(user_id, {}).get("step") == "waiting_broadcast":
         if user_id == ADMIN_ID:
             user_state.pop(user_id, None)
-            bot.send_message(user_id, f"✅ Broadcast shofolvabe somponno hoyeche!\n\nMessage:\n{text}")
+            bot.send_message(user_id, f"✅ Broadcast shofolvabe somponno hoyeche!\n\nMessage:\n{text}", reply_markup=main_menu())
 
     elif user_state.get(user_id, {}).get("step") == "waiting_amount":
         try:
@@ -109,14 +110,14 @@ def handle_messages(message):
                 f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 f"📥 Dollar pathanor por **Order ID (TXID)** ti ekhane likhe pathan:"
             )
-            bot.send_message(user_id, binance_msg, parse_mode="Markdown")
+            bot.send_message(user_id, binance_msg, parse_mode="Markdown", reply_markup=main_menu())
         except ValueError:
-            bot.send_message(user_id, "⚠️ Dya kore sothik songkha likhun (je: 10 ba 20)")
+            bot.send_message(user_id, "⚠️ Dya kore sothik songkha likhun (je: 10 ba 20)", reply_markup=main_menu())
 
     elif user_state.get(user_id, {}).get("step") == "waiting_order_id":
         user_state[user_id]["order_id"] = text
         user_state[user_id]["step"] = "waiting_screenshot"
-        bot.send_message(user_id, "✅ **Order ID grohon kora hoyeche!**\n\n📸 Ekhon apnar Binance Payment-er **screenshot** chobi akare pathan:")
+        bot.send_message(user_id, "✅ **Order ID grohon kora hoyeche!**\n\n📸 Ekhon apnar Binance Payment-er **screenshot** chobi akare pathan:", reply_markup=main_menu())
 
     elif user_state.get(user_id, {}).get("step") == "waiting_bkash":
         user_state[user_id]["bkash_number"] = text
@@ -162,7 +163,8 @@ def handle_photos(message):
         bot.send_message(
             user_id, 
             "✅ **Screenshot shongrokkhon kora hoyeche!**\n\n"
-            "💳 Ekhon apnar je **bkash number**-e taka nite chan ta niche likhe pathan:"
+            "💳 Ekhon apnar je **bkash number**-e taka nite chan ta niche likhe pathan:",
+            reply_markup=main_menu()
         )
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -184,7 +186,10 @@ def callback_query(call):
             parse_mode="Markdown", 
             reply_markup=main_menu()
         )
-        bot.edit_message_caption(caption=call.message.caption + "\n\n✅ **STATUS: APPROVED & PAID**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        try:
+            bot.edit_message_caption(caption=call.message.caption + "\n\n✅ **STATUS: APPROVED & PAID**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        except Exception:
+            bot.edit_message_text(text=call.message.text + "\n\n✅ **STATUS: APPROVED & PAID**", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     elif data.startswith("rej_"):
         target_user = int(data.split("_")[1])
@@ -195,7 +200,10 @@ def callback_query(call):
             parse_mode="Markdown", 
             reply_markup=main_menu()
         )
-        bot.edit_message_caption(caption=call.message.caption + "\n\n❌ **STATUS: REJECTED**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        try:
+            bot.edit_message_caption(caption=call.message.caption + "\n\n❌ **STATUS: REJECTED**", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        except Exception:
+            bot.edit_message_text(text=call.message.text + "\n\n❌ **STATUS: REJECTED**", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     elif data == "admin_toggle":
         bot_status["is_active"] = not bot_status["is_active"]
