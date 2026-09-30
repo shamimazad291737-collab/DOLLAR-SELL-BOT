@@ -1,6 +1,7 @@
 import os
 import telebot
 from telebot import types
+from flask import Flask, request
 
 TOKEN = os.environ.get('BOT_TOKEN')
 try:
@@ -9,11 +10,12 @@ except ValueError:
     ADMIN_ID = 0
 
 BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
+ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
-# Polling মোডের জন্য বট ইনিশিয়ালাইজেশন
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, threaded=False)
+server = Flask(__name__)
 
 user_state = {}
 bot_status = {"is_active": True}
@@ -25,6 +27,25 @@ def main_menu():
     btn_admin = types.KeyboardButton("👑 ADMIN PANEL")
     markup.add(btn_sell, btn_support, btn_admin)
     return markup
+
+@server.route(f'/{TOKEN}', methods=['POST'])
+def webhook_handler():
+    if request.headers.get('content-type') == 'application/json':
+        json_data = request.get_json(force=True)
+        update = telebot.types.Update.de_json(json_data)
+        bot.process_new_updates([update])
+        return '', 200
+    return 'Invalid Request', 403
+
+@server.route("/")
+def index():
+    return "🚀 Premium Dollar Sell Bot is running smoothly!", 200
+
+def set_webhook_url():
+    bot.remove_webhook()
+    render_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if render_url:
+        bot.set_webhook(url=f"{render_url}/{TOKEN}")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -71,7 +92,7 @@ def handle_support(message):
 def handle_admin(message):
     user_id = message.from_user.id
     if user_id != ADMIN_ID:
-        bot.send_message(user_id, f"❌ আপনার এই প্যানেল ব্যবহারের অনুমতি নেই!\n\nআপনার Telegram User ID: `{user_id}`", parse_mode="Markdown")
+        bot.send_message(user_id, f"❌ আপনার এই প্যানেল ব্যবহারের অনুমতি নেই!\n\nআপনার Telegram User ID: `{user_id}`\n(এটি Render-এর ADMIN_ID ভেরিয়েবলে বসিয়ে দিন)", parse_mode="Markdown")
         return
     
     admin_markup = types.InlineKeyboardMarkup(row_width=2)
@@ -188,7 +209,7 @@ def callback_query(call):
         bot.answer_callback_query(call.id, "Approved!")
         bot.send_message(
             target_user, 
-            "🎉 **অভিনندن! আপনার ডলার অর্ডারটি ভেরিফাই ও পেমেন্ট সম্পন্ন হয়েছে।**", 
+            "🎉 **অভিনন্দন! আপনার ডলার অর্ডারটি ভেরিফাই ও পেমেন্ট সম্পন্ন হয়েছে।**", 
             parse_mode="Markdown", 
             reply_markup=main_menu()
         )
@@ -218,7 +239,5 @@ def callback_query(call):
         bot.send_message(ADMIN_ID, "📢 ব্রডকাস্ট মেসেজটি লিখে পাঠান:")
 
 if __name__ == "__main__":
-    print("Bot is starting with Polling mode...")
-    # পুরানো কোনো ওয়েব হুক থাকলে তা রিমুভ করে দেওয়া
-    bot.remove_webhook()
-    bot.infinity_polling(skip_pending=True)
+    set_webhook_url()
+    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
