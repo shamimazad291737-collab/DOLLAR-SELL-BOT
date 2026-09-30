@@ -1,7 +1,6 @@
 import os
 import telebot
 from telebot import types
-from flask import Flask, request
 
 TOKEN = os.environ.get('BOT_TOKEN')
 # Safe parsing for ADMIN_ID
@@ -15,8 +14,8 @@ ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
-server = Flask(__name__)
+# Polling মোডের জন্য টেলিগ্রাম বট ইনিশিয়ালাইজেশন
+bot = telebot.TeleBot(TOKEN)
 
 user_state = {}
 bot_status = {"is_active": True}
@@ -28,25 +27,6 @@ def main_menu():
     btn_admin = types.KeyboardButton("👑 ADMIN PANEL")
     markup.add(btn_sell, btn_support, btn_admin)
     return markup
-
-@server.route(f'/{TOKEN}', methods=['POST'])
-def webhook_handler():
-    if request.headers.get('content-type') == 'application/json':
-        json_data = request.get_json(force=True)
-        update = telebot.types.Update.de_json(json_data)
-        bot.process_new_updates([update])
-        return '', 200
-    return 'Invalid Request', 403
-
-@server.route("/")
-def index():
-    return "🚀 Premium Dollar Sell Bot is running smoothly!", 200
-
-def set_webhook_url():
-    bot.remove_webhook()
-    render_url = os.environ.get('RENDER_EXTERNAL_URL')
-    if render_url:
-        bot.set_webhook(url=f"{render_url}/{TOKEN}")
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -94,7 +74,6 @@ def handle_messages(message):
         bot.send_message(user_id, support_msg, parse_mode="Markdown")
 
     elif text == "👑 ADMIN PANEL":
-        # Jodi ADMIN_ID thik na thake, tahole user ke tar id dekhiye dibe jate render a set korte pare
         if user_id != ADMIN_ID:
             bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`\n(Eta Render-er ADMIN_ID variable-e bosan)", parse_mode="Markdown")
             return
@@ -231,5 +210,6 @@ def callback_query(call):
         bot.send_message(ADMIN_ID, "📢 Broadcast message-ti likhe pathan:")
 
 if __name__ == "__main__":
-    set_webhook_url()
-    server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    print("Bot is starting with Polling mode...")
+    bot.remove_webhook()
+    bot.infinity_polling(skip_pending=True)
