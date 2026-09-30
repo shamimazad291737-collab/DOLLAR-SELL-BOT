@@ -4,10 +4,14 @@ from telebot import types
 from flask import Flask, request
 
 TOKEN = os.environ.get('BOT_TOKEN')
-ADMIN_ID = int(os.environ.get('ADMIN_ID', '0'))
+try:
+    ADMIN_ID = int(os.environ.get('ADMIN_ID', '0'))
+except ValueError:
+    ADMIN_ID = 0
+
 BINANCE_ID = os.environ.get('BINANCE_ID', 'YOUR_BINANCE_ID')
 ADMIN_BKASH = os.environ.get('ADMIN_BKASH', '01XXXXXXXXX')
-ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_9X')
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'SAIM_X9')
 DOLAR_RATE = float(os.environ.get('DOLAR_RATE', '119'))
 
 bot = telebot.TeleBot(TOKEN, threaded=False)
@@ -46,68 +50,75 @@ def set_webhook_url():
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     if not bot_status["is_active"] and message.from_user.id != ADMIN_ID:
-        bot.reply_to(message, "⚠️ দুঃখಿತ! বর্তমানে আমাদের সার্ভিস সাময়িকভাবে বন্ধ রয়েছে। একটু পরে আবার চেষ্টা করুন।")
+        bot.reply_to(message, "⚠️ Dukkito! Bortomane amader service bondho royeche.")
         return
     
     user_state.pop(message.from_user.id, None)
     welcome_text = (
-        f"🌟 **అlān! প্রিমিয়াম ডলার এক্সচেঞ্জ জোনে আপনাকে স্বাগতম!** 🌟\n\n"
+        f"🌟 **Premium Dollar Exchange Zone e apnake shagotom!** 🌟\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"💱 **বর্তমান রেট:** `1 USD = ৳{DOLAR_RATE}`\n"
-        f"⚡ **সেবা:** দ্রুত ও শতভাগ নিরাপদ লেনদেন।\n"
+        f"💱 **Bortoman Rate:** `1 USD = ৳{DOLAR_RATE}`\n"
+        f"⚡ **Sebaa:** Druto o nirapod len-den.\n"
         f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        f"👇 আপনার প্রয়োজনীয় অপশনটি নিচে থেকে সিলেক্ট করুন:"
+        f"👇 Apnar proyojonio option niche theke select korun:"
     )
     bot.send_message(message.chat.id, welcome_text, parse_mode="Markdown", reply_markup=main_menu())
 
+@bot.message_handler(func=lambda message: message.text == "💵 SELL DOLLER NOW")
+def handle_sell(message):
+    user_id = message.from_user.id
+    user_state[user_id] = {"step": "waiting_amount"}
+    msg = (
+        f"🎉 **Ovinondon! Apni amader sathe shofolvabe dollar sell shuru korechen.**\n\n"
+        f"📈 Bortoman exchange rate: **৳{DOLAR_RATE} / USD**\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"✏️️ **Apni koto dollar (USD) sell korte chan?**\n"
+        f"Dya kore shudhu songkha ti (jemon: `10` ba `50`) niche likhe pathan:"
+    )
+    bot.send_message(user_id, msg, parse_mode="Markdown")
+
+@bot.message_handler(func=lambda message: message.text == "📞 SUPPORT & HELP")
+def handle_support(message):
+    user_id = message.from_user.id
+    support_msg = (
+        f"🛠 **Customer Support & Help Desk**\n\n"
+        f"Jekono proyojone amader official admin-er sathe jogajog korun:\n\n"
+        f"👤 **Admin Username:** @{ADMIN_USERNAME}\n"
+        f"⚡ Amra 24 ghonta apnar sohayotay niyojito."
+    )
+    bot.send_message(user_id, support_msg, parse_mode="Markdown", reply_markup=main_menu())
+
+@bot.message_handler(func=lambda message: message.text == "👑 ADMIN PANEL")
+def handle_admin(message):
+    user_id = message.from_user.id
+    if user_id != ADMIN_ID:
+        bot.send_message(user_id, f"❌ Apnar ei panel use korar permission nei!\n\nApnar Telegram User ID: `{user_id}`\n(Eta Render-er ADMIN_ID variable-e bosan)", parse_mode="Markdown")
+        return
+    
+    admin_markup = types.InlineKeyboardMarkup(row_width=2)
+    admin_markup.add(
+        types.InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast"),
+        types.InlineKeyboardButton("💱 Change Rate", callback_data="admin_rate"),
+        types.InlineKeyboardButton("🔄 Bot On/Off", callback_data="admin_toggle")
+    )
+    bot.send_message(user_id, "👑 **Admin Control Panel**\n\nNicher option gulo theke kaj select korun:", parse_mode="Markdown", reply_markup=admin_markup)
+
 @bot.message_handler(func=lambda message: True)
-def handle_messages(message):
+def handle_text_steps(message):
     user_id = message.from_user.id
     text = message.text
+    current_state = user_state.get(user_id, {}).get("step")
 
     if not bot_status["is_active"] and user_id != ADMIN_ID:
-        bot.reply_to(message, "⚠️ বটটি বর্তমানে অফলাইন রয়েছে।")
+        bot.reply_to(message, "⚠️ Bot-ti bortomane offline royeche.")
         return
 
-    if text == "💵 SELL DOLLER NOW":
-        user_state[user_id] = {"step": "waiting_amount"}
-        msg = (
-            f"🎉 **অভিনন্দন! আপনি আমাদের সাথে সফলভাবে ডলার সেল প্রক্রিয়া শুরু করেছেন।**\n\n"
-            f"📈 বর্তমান এক্সচেঞ্জ রেট: **৳{DOLAR_RATE} / USD**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"✏️ **আপনি কত ডলার (USD) সেল করতে চান?**\n"
-            f"দয়া করে শুধু সংখ্যাটি (যেমন: `10` বা `50`) নিচে লিখে পাঠান:"
-        )
-        bot.send_message(user_id, msg, parse_mode="Markdown")
-
-    elif text == "📞 SUPPORT & HELP":
-        support_msg = (
-            f"🛠 **কাস্টমার সাপোর্ট ও হেল্প ডেস্ক**\n\n"
-            f"লেনদেন বা অন্য যেকোনো প্রয়োজনে সরাসরি আমাদের অফিসিয়াল এডমিনের সাথে যোগাযোগ করুন:\n\n"
-            f"👤 **Admin Username:** @{ADMIN_USERNAME}\n"
-            f"⚡ আমরা ২৪/ঘন্টা আপনার সহায়তায় নিয়োজিত।"
-        )
-        bot.send_message(user_id, support_msg, parse_mode="Markdown")
-
-    elif text == "👑 ADMIN PANEL":
-        if user_id != ADMIN_ID:
-            bot.send_message(user_id, "❌ আপনার এই প্যানেলটি ব্যবহারের অনুমতি নেই!")
-            return
-        
-        admin_markup = types.InlineKeyboardMarkup(row_width=2)
-        admin_markup.add(
-            types.InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast"),
-            types.InlineKeyboardButton("💱 Change Rate", callback_data="admin_rate"),
-            types.InlineKeyboardButton("🔄 Bot On/Off", callback_data="admin_toggle")
-        )
-        bot.send_message(user_id, "👑 **এডমিন কন্ট্রোল প্যানেল**\n\nনিচের অপশনগুলো থেকে আপনার প্রয়োজনীয় কাজ সিলেক্ট করুন:", parse_mode="Markdown", reply_markup=admin_markup)
-
-    elif user_state.get(user_id, {}).get("step") == "waiting_broadcast":
+    if current_state == "waiting_broadcast":
         if user_id == ADMIN_ID:
             user_state.pop(user_id, None)
-            bot.send_message(user_id, f"✅ ব্রডকাস্ট সফলভাবে সম্পন্ন হয়েছে!\n\nমেসেজ:\n{text}")
+            bot.send_message(user_id, f"✅ Broadcast shofolvabe somponno hoyeche!\n\nMessage:\n{text}")
 
-    elif user_state.get(user_id, {}).get("step") == "waiting_amount":
+    elif current_state == "waiting_amount":
         try:
             amount = float(text)
             total_taka = amount * DOLAR_RATE
@@ -116,36 +127,36 @@ def handle_messages(message):
             user_state[user_id]["step"] = "waiting_order_id"
 
             binance_msg = (
-                f"✅ আপনি সেল করতে চাচ্ছেন: **{amount} USD**\n"
-                f"💰 আপনি পাবেন: **৳{total_taka}**\n\n"
+                f"✅ Apni sell korte chacchen: **{amount} USD**\n"
+                f"💰 Apni paben: **৳{total_taka}**\n\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💎 **পেমেন্ট নির্দেশিকা:**\n"
-                f"দয়া করে নিচের Binance Pay ID তে আপনার ডলারগুলো সেন্ড করুন:\n\n"
+                f"💎 **Payment Nirdeshika:**\n"
+                f"Dya kore nicher Binance Pay ID te dollar send korun:\n\n"
                 f"🆔 **Binance Pay ID:** `{BINANCE_ID}`\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                f"📥 ডলার পাঠানোর পর প্রাপ্ত **Order ID (TXID)** টি এখানে লিখে পাঠান:"
+                f"📥 Dollar pathanor por **Order ID (TXID)** ti ekhane likhe pathan:"
             )
             bot.send_message(user_id, binance_msg, parse_mode="Markdown")
         except ValueError:
-            bot.send_message(user_id, "⚠️ দয়া করে সঠিক সংখ্যা লিখুন (যেমন: 10 বা 20)")
+            bot.send_message(user_id, "⚠️ Dya kore sothik songkha likhun (jemon: 10 ba 20)")
 
-    elif user_state.get(user_id, {}).get("step") == "waiting_order_id":
+    elif current_state == "waiting_order_id":
         user_state[user_id]["order_id"] = text
         user_state[user_id]["step"] = "waiting_screenshot"
-        bot.send_message(user_id, "✅ **Order ID সফলভাবে গৃহীত হয়েছে!**\n\n📸 এখন আপনার Binance Payment-এর পরিষ্কার **স্ক্রিনশট (Screenshot)** ছবি আকারে পাঠান:")
+        bot.send_message(user_id, "✅ **Order ID grohon kora hoyeche!**\n\n📸 Ekhon apnar Binance Payment-er **screenshot** chobi akare pathan:")
 
-    elif user_state.get(user_id, {}).get("step") == "waiting_bkash":
+    elif current_state == "waiting_bkash":
         user_state[user_id]["bkash_number"] = text
         data = user_state[user_id]
         user_state[user_id]["step"] = "completed"
 
         summary_msg = (
-            f"🎉 **অর্ডারটি সফলভাবে সাবমিট হয়েছে!**\n\n"
-            f"💵 ডলার পরিমাণ: `{data['amount']} USD`\n"
-            f"💰 প্রদেয় টাকা: `৳{data['total_taka']}`\n"
+            f"🎉 **Order-ti shofolvabe submit hoyeche!**\n\n"
+            f"💵 Dollar: `{data['amount']} USD`\n"
+            f"💰 Taka: `৳{data['total_taka']}`\n"
             f"🆔 Order ID: `{data['order_id']}`\n"
-            f"📱 বিকাশ নম্বর: `{data['bkash_number']}`\n\n"
-            f"⏳ **দয়া করে ১৫ মিনিট অপেক্ষা করুন। পেমেন্ট সম্পন্ন হলে আপনার বিকাশ নাম্বারে কনফার্মেশন এসএমএস চলে যাবে।**"
+            f"📱 Bkash: `{data['bkash_number']}`\n\n"
+            f"⏳ **15 minit opekkha korun. Payment somponno hole sms paben.**"
         )
         bot.send_message(user_id, summary_msg, parse_mode="Markdown", reply_markup=main_menu())
 
@@ -167,6 +178,8 @@ def handle_messages(message):
             bot.send_photo(ADMIN_ID, data["photo_file_id"], caption=admin_notification, parse_mode="Markdown", reply_markup=admin_markup)
         else:
             bot.send_message(ADMIN_ID, admin_notification, parse_mode="Markdown", reply_markup=admin_markup)
+    else:
+        bot.send_message(user_id, "👇 Dya kore nicher menu theke kono option select korun:", reply_markup=main_menu())
 
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
@@ -175,24 +188,11 @@ def handle_photos(message):
         user_state[user_id]["photo_file_id"] = message.photo[-1].file_id
         user_state[user_id]["step"] = "waiting_bkash"
         
-        # বিকাশ নম্বর পাঠানোর জন্য সুন্দর রি-প্লাই কিবোর্ড বাটন
-        bkash_markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-        bkash_markup.add(types.KeyboardButton("📱 Share My Contact/bKash", request_contact=True))
-        
         bot.send_message(
             user_id, 
-            "✅ **স্ক্রিনশট সফলভাবে সংরক্ষিত হয়েছে!**\n\n"
-            "💳 এখন আপনি যে **বিকাশ নম্বরে** টাকা নিতে চান তা নিচে লিখে পাঠান:", 
-            reply_markup=bkash_markup
+            "✅ **Screenshot shongrokkhon kora hoyeche!**\n\n"
+            "💳 Ekhon apnar je **bkash number**-e taka nite chan ta niche likhe pathan:"
         )
-
-@bot.message_handler(content_types=['contact'])
-def handle_contact(message):
-    user_id = message.from_user.id
-    if user_state.get(user_id, {}).get("step") == "waiting_bkash":
-        phone = message.contact.phone_number
-        message.text = phone
-        handle_messages(message)
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
@@ -201,16 +201,15 @@ def callback_query(call):
     data = call.data
 
     if user_id != ADMIN_ID:
-        bot.answer_callback_query(call.id, "❌ আপনার এই কাজটি করার অনুমতি নেই!", show_alert=True)
+        bot.answer_callback_query(call.id, "❌ Ei kaj korar permission nei!", show_alert=True)
         return
 
     if data.startswith("app_"):
         target_user = int(data.split("_")[1])
-        bot.answer_callback_query(call.id, "Order Approved Successfully!")
+        bot.answer_callback_query(call.id, "Approved!")
         bot.send_message(
             target_user, 
-            "🎉 **অভিনন্দন! আপনার ডলার অর্ডারটি সফলভাবে ভেরিফাই ও পেমেন্ট সম্পন্ন হয়েছে।**\n\n"
-            "আমাদের সাথে থাকার জন্য ধন্যবাদ। আবার ডলার সেল করতে চাইলে নিচের মেনു ব্যবহার করুন।", 
+            "🎉 **Ovinondon! Apnar dollar order-ti verify o payment somponno hoyeche.**", 
             parse_mode="Markdown", 
             reply_markup=main_menu()
         )
@@ -218,27 +217,26 @@ def callback_query(call):
 
     elif data.startswith("rej_"):
         target_user = int(data.split("_")[1])
-        bot.answer_callback_query(call.id, "Order Rejected.")
+        bot.answer_callback_query(call.id, "Rejected.")
         bot.send_message(
             target_user, 
-            "⚠️ **সতর্কবার্তা! আপনার ডলার অর্ডারটি রিজেক্ট করা হয়েছে।**\n\n"
-            "দয়া করে আপনার Order ID এবং Screenshot ভালোভাবে চেক করে পুনরায় সঠিক তথ্য দিয়ে রিসাবমিট (Resubmit) করুন।", 
+            "⚠️️ **Sotorkobarta! Apnar order-ti reject kora hoyeche. Sothik tottho diye abar resubmit korun.**", 
             parse_mode="Markdown", 
-            reply_markup=main_menu()
+            reply_markup=main_menu() ba main_menu()
         )
         bot.edit_message_caption(caption=call.message.caption + "\n\n❌ **STATUS: REJECTED**", chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     elif data == "admin_toggle":
         bot_status["is_active"] = not bot_status["is_active"]
-        status_text = "Active (চালু)" if bot_status["is_active"] else "Off (বন্ধ)"
-        bot.answer_callback_query(call.id, f"বটের বর্তমান স্ট্যাটাস: {status_text}", show_alert=True)
+        status_text = "Active" if bot_status["is_active"] else "Off"
+        bot.answer_callback_query(call.id, f"Status: {status_text}", show_alert=True)
 
     elif data == "admin_rate":
-        bot.answer_callback_query(call.id, f"বর্তমান ডলার রেট: ৳{DOLAR_RATE}", show_alert=True)
+        bot.answer_callback_query(call.id, f"Rate: ৳{DOLAR_RATE}", show_alert=True)
 
     elif data == "admin_broadcast":
         user_state[ADMIN_ID] = {"step": "waiting_broadcast"}
-        bot.send_message(ADMIN_ID, "📢 সকল ইউজারের কাছে পাঠানোর জন্য ব্রডকাস্ট মেসেজটি লিখে পাঠান:")
+        bot.send_message(ADMIN_ID, "📢 Broadcast message-ti likhe pathan:")
 
 if __name__ == "__main__":
     set_webhook_url()
